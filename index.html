@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photoshop Pen Tool Curve Practice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+            background-image: linear-gradient(#add8e6 1px, transparent 1px),
+                              linear-gradient(90deg, #add8e6 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Special Elite', cursive;
+            color: #ff69b4;
+        }
+        #canvas {
+            border: 1px solid #000;
+            margin: 20px 0;
+            background-color: white;
+        }
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #ff69b4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Special Elite', cursive;
+        }
+        #instructions, #photoshop-tip {
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        #shapeSelector {
+            margin-bottom: 20px;
+        }
+        #photoshop-tip {
+            margin-top: 30px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        #photoshop-tip h2 {
+            margin-top: 0;
+        }
+        #photoshop-tip ol {
+            padding-left: 20px;
+        }
+        #photoshop-tip li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pen Tool Curve Practice</h1>
+    <div id="instructions">
+        Click to place anchor points. Click and drag to create curve handles. 
+        Try to recreate the blue curve shape as closely as possible!<br>
+        Hold Option (Alt) key while creating or adjusting handles for asymmetrical curves.
+    </div>
+    <div id="shapeSelector">
+        <label for="shapes">Choose a shape:</label>
+        <select id="shapes" onchange="changeShape()">
+            <option value="infinity">Infinity</option>
+            <option value="heart">Heart</option>
+            <option value="wave">Wave</option>
+        </select>
+    </div>
+    <div id="controls">
+        <button onclick="undoLastPoint()">Undo Last Point</button>
+        <button onclick="resetCanvas()">Reset Canvas</button>
+        <button onclick="checkAccuracy()">Check Accuracy</button>
+    </div>
+    <canvas id="canvas" width="500" height="300"></canvas>
+    <div id="feedback"></div>
+
+    <div id="photoshop-tip">
+        <h2>Important Photoshop Tip:</h2>
+        <p>When using the Pen Tool to cut out shapes in Photoshop, remember these steps:</p>
+        <ol>
+            <li>Create your path with the Pen Tool</li>
+            <li>Right-click on the path</li>
+            <li>Select "Make Selection"</li>
+            <li>Press Delete to remove the area outside your selection</li>
+        </ol>
+        <p>Note: This is typically the quickest way to cut out shapes using the Pen Tool in Photoshop.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let path = [];
+        let isDrawing = false;
+        let currentHandle = null;
+        let isAltKeyPressed = false;
+        let currentShape = "infinity";
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+
+        function handleKeyDown(e) {
+            if (e.key === 'Alt' || e.key === 'Option') {
+                isAltKeyPressed = true;
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === 'Alt' || e.key === 'Option') {
+                isAltKeyPressed = false;
+            }
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const distanceThreshold = 10; // pixels
+            
+            if (path.length === 0) {
+                // First point
+                path.push({x, y, handleIn: null, handleOut: {x, y}});
+            } else {
+                const lastPoint = path[path.length - 1];
+                const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+                
+                if (distance < distanceThreshold) {
+                    // Adjusting handle of existing point
+                    currentHandle = 'handleOut';
+                } else {
+                    // New point
+                    path.push({x, y, handleIn: null, handleOut: {x, y}});
+                }
+            }
+            drawPath();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (path.length > 0) {
+                const lastPoint = path[path.length - 1];
+                if (currentHandle) {
+                    lastPoint[currentHandle] = {x, y};
+                    if (currentHandle === 'handleOut' && !isAltKeyPressed) {
+                        lastPoint.handleIn = {
+                            x: lastPoint.x - (lastPoint.handleOut.x - lastPoint.x),
+                            y: lastPoint.y - (lastPoint.handleOut.y - lastPoint.y)
+                        };
+                    }
+                } else {
+                    // Always update handleOut when dragging
+                    lastPoint.handleOut = {x, y};
+                    if (!isAltKeyPressed) {
+                        lastPoint.handleIn = {
+                            x: lastPoint.x - (x - lastPoint.x),
+                            y: lastPoint.y - (y - lastPoint.y)
+                        };
+                    }
+                }
+                drawPath();
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            currentHandle = null;
+        }
+
+        function drawPath() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGoalShape();
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                if (i === 0) {
+                    ctx.moveTo(path[i].x, path[i].y);
+                } else {
+                    const prev = path[i-1];
+                    const curr = path[i];
+                    if (prev.handleOut && curr.handleIn) {
+                        ctx.bezierCurveTo(
+                            prev.handleOut.x, prev.handleOut.y,
+                            curr.handleIn.x, curr.handleIn.y,
+                            curr.x, curr.y
+                        );
+                    } else {
+                        ctx.lineTo(curr.x, curr.y);
+                    }
+                }
+            }
+            ctx.stroke();
+
+            // Draw handles
+            ctx.fillStyle = 'red';
+            path.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                if (point.handleOut) {
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(point.handleOut.x, point.handleOut.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                if (point.handleIn) {
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(point.handleIn.x, point.handleIn.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function undoLastPoint() {
+            path.pop();
+            drawPath();
+        }
+
+        function resetCanvas() {
+            path = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGoalShape();
+        }
+
+        function drawGoalShape() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+            ctx.beginPath();
+            
+            switch(currentShape) {
+                case "infinity":
+                    ctx.moveTo(50, 150);
+                    ctx.bezierCurveTo(150, 50, 350, 50, 450, 150);
+                    ctx.bezierCurveTo(350, 250, 150, 250, 50, 150);
+                    break;
+                case "heart":
+                    ctx.moveTo(250, 60);
+                    ctx.bezierCurveTo(200, 20, 150, 60, 150, 110);
+                    ctx.bezierCurveTo(150, 160, 250, 220, 250, 220);
+                    ctx.bezierCurveTo(250, 220, 350, 160, 350, 110);
+                    ctx.bezierCurveTo(350, 60, 300, 20, 250, 60);
+                    break;
+                case "wave":
+                    ctx.moveTo(50, 150);
+                    ctx.bezierCurveTo(100, 50, 150, 250, 200, 150);
+                    ctx.bezierCurveTo(250, 50, 300, 250, 350, 150);
+                    ctx.bezierCurveTo(400, 50, 450, 250, 500, 150);
+                    break;
+            }
+            
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function changeShape() {
+            currentShape = document.getElementById('shapes').value;
+            resetCanvas();
+        }
+
+        function checkAccuracy() {
+            // This is a simplified accuracy check
+            let score = 0;
+            const totalPoints = 100;
+            for (let i = 0; i < totalPoints; i++) {
+                const t = i / (totalPoints - 1);
+                const goalPoint = getPointOnGoalCurve(t);
+                const userPoint = getPointOnUserCurve(t);
+                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+                if (distance < 10) {
+                    score++;
+                }
+            }
+            const accuracy = (score / totalPoints) * 100;
+            document.getElementById('feedback').textContent = `Your curve is approximately ${accuracy.toFixed(1)}% accurate.`;
+        }
+
+        function getPointOnGoalCurve(t) {
+            switch(currentShape) {
+                case "infinity":
+                    return getInfinityPoint(t);
+                case "heart":
+                    return getHeartPoint(t);
+                case "wave":
+                    return getWavePoint(t);
+                default:
+                    return {x: 0, y: 0};
+            }
+        }
+
+        function getInfinityPoint(t) {
+            const x = 50 * Math.pow(1-t, 3) + 450 * Math.pow(t, 3) + 3 * (150 * Math.pow(1-t, 2) * t + 350 * (1-t) * Math.pow(t, 2));
+            const y = 150 * Math.pow(1-t, 3) + 150 * Math.pow(t, 3) + 3 * (50 * Math.pow(1-t, 2) * t + 250 * (1-t) * Math.pow(t, 2));
+            return {x, y};
+        }
+
+        function getHeartPoint(t) {
+            // Simplified heart shape calculation
+            if (t < 0.5) {
+                const tt = t * 2;
+                const x = 250 - 100 * Math.sin(tt * Math.PI);
+                const y = 110 - 50 * Math.cos(tt * Math.PI);
+                return {x, y};
+            } else {
+                const tt = (t - 0.5) * 2;
+                const x = 250 + 100 * Math.sin(tt * Math.PI);
+                const y = 110 - 50 * Math.cos(tt * Math.PI);
+                return {x, y};
+            }
+        }
+
+        function getWavePoint(t) {
+            const x = 50 + 450 * t;
+            const y = 150 + 100 * Math.sin(t * Math.PI * 3);
+            return {x, y};
+        }
+
+        function getPointOnUserCurve(t) {
+            if (path.length < 2) return {x: 0, y: 0};
+            let segmentT = t * (path.length - 1);
+            let segmentIndex = Math.floor(segmentT);
+            let localT = segmentT - segmentIndex;
+            
+            if (segmentIndex >= path.length - 1) {
+                segmentIndex = path.length - 2;
+                localT = 1;
+            }
+
+            const p0 = path[segmentIndex];
+            const p1 = path[segmentIndex + 1];
+
+            if (!p0.handleOut || !p1.handleIn) {
+                return {
+                    x: p0.x * (1 - localT) + p1.x * localT,
+                    y: p0.y * (1 - localT) + p1.y * localT
+                };
+            }
+
+            const cp1 = p0.handleOut;
+            const cp2 = p1.handleIn;
+
+            const x = Math.pow(1-localT, 3) * p0.x +
+                      3 * Math.pow(1-localT, 2) * localT * cp1.x +
+                      3 * (1-localT) * Math.pow(localT, 2) * cp2.x +
+                      Math.pow(localT, 3) * p1.x;
+
+            const y = Math.pow(1-localT, 3) * p0.y +
+                      3 * Math.pow(1-localT, 2) * localT * cp1.y +
+                      3 * (1-localT) * Math.pow(localT, 2) * cp2.y +
+                      Math.pow(localT, 3) * p1.y;
+
+            return {x, y};
+        }
+
+        drawGoalShape();
+    </script>
+</body>
+</html>

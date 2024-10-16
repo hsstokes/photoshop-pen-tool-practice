@@ -286,35 +286,66 @@
             resetCanvas();
         }
 
-         function checkAccuracy() {
-        let score = 0;
-        const totalPoints = 100;
-        for (let i = 0; i < totalPoints; i++) {
-            const t = i / (totalPoints - 1);
-            const goalPoint = getPointOnGoalCurve(t);
-            const userPoint = getPointOnUserCurve(t);
-            const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-                 if (distance < 30) {
-                     score += 1 - (distance / 30);
+        function checkAccuracy() {
+            let score = 0;
+            const totalPoints = 100;
+            let closestDistance = Infinity;
+            let furthestDistance = 0;
+            let averageDistance = 0;
+
+            for (let i = 0; i < totalPoints; i++) {
+                const t = i / (totalPoints - 1);
+                const goalPoint = getPointOnGoalCurve(t);
+                const userPoint = getPointOnUserCurve(t);
+                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+                
+                closestDistance = Math.min(closestDistance, distance);
+                furthestDistance = Math.max(furthestDistance, distance);
+                averageDistance += distance;
+                if (distance < 50) {
+                    score += 1 - (distance / 50);
                 }
             }
-            const rawScore = (score / totalPoints) * 100;
-        const adjustedScore = Math.min(10, Math.max(1, Math.ceil(rawScore / 10)));
-        
-        const feedback = [
-            "Keep practicing! You're on the right track.",
-            "Good effort! Try to get closer to the blue line.",
-            "Nice work! You're getting better.",
-            "Well done! Your curves are improving.",
-            "Great job! You're mastering the pen tool.",
-            "Excellent! Your curves are very close.",
-            "Impressive work! You're nearly matching the shape.",
-            "Outstanding! Your control is excellent.",
-            "Amazing precision! You're a pen tool pro.",
-            "Perfect! Your curves match the shape exactly."
-        ];
+            averageDistance /= totalPoints;
 
-        document.getElementById('feedback').textContent = `Score: ${adjustedScore}/10 - ${feedback[adjustedScore - 1]}`;
+            // Base score for attempt
+            let baseScore = 3;
+            
+            // Additional points for overall shape resemblance
+            const shapeScore = Math.max(0, 5 - (averageDistance / 20));
+            
+            // Points for consistency
+            const consistencyScore = Math.max(0, 2 - ((furthestDistance - closestDistance) / 50));
+            
+            // Calculate final score
+            const finalScore = Math.min(10, Math.max(1, Math.round(baseScore + shapeScore + consistencyScore)));
+
+            const feedback = [
+                "Great start! You're beginning to grasp the pen tool. Keep practicing!",
+                "Nice attempt! Try to follow the blue line more closely.",
+                "Good effort! Your curves are taking shape. Keep refining!",
+                "Well done! You're getting the hang of it. Focus on smoother curves.",
+                "Impressive progress! Your shape is becoming more accurate.",
+                "Excellent work! Your curves are very close to the target.",
+                "Outstanding control! You're nearly matching the shape perfectly.",
+                "Amazing precision! You're mastering the pen tool.",
+                "Exceptional skill! Your curves are almost indistinguishable from the goal.",
+                "Perfect! Your mastery of the pen tool is evident. Fantastic job!"
+            ];
+
+            let detailedFeedback = `Score: ${finalScore}/10 - ${feedback[finalScore - 1]}\n\n`;
+            detailedFeedback += `Shape Accuracy: ${Math.round(shapeScore * 20)}%\n`;
+            detailedFeedback += `Curve Consistency: ${Math.round(consistencyScore * 50)}%\n\n`;
+            detailedFeedback += "Tip: " + getTip(finalScore);
+
+            document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
+        }
+
+        function getTip(score) {
+            if (score <= 3) return "Try using fewer anchor points and focus on the overall shape.";
+            if (score <= 6) return "Adjust your curve handles to smooth out the lines.";
+            if (score <= 9) return "Fine-tune your anchor point positions for perfect symmetry.";
+            return "Challenge yourself with more complex shapes!";
         }
 
         function getPointOnGoalCurve(t) {

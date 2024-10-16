@@ -65,32 +65,9 @@
         #photoshop-tip li {
             margin-bottom: 10px;
         }
-.video-container {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-bottom: 56.25%; 
-    margin-bottom: 20px;
-    overflow: hidden;
-    max-width: 800px; 
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.video-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 1px solid #464646;
-}
     </style>
 </head>
 <body>
-   <div class="video-container">
-    <iframe src="https://ual.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=dce271eb-9861-47d2-88c1-b20a00902248&autoplay=false&offerviewer=true&showtitle=true&showbrand=true&captions=false&interactivity=all" allowfullscreen allow="autoplay" aria-label="Panopto Embedded Video Player" aria-description="pen tool"></iframe>
-</div>
     <h1>Pen Tool Curve Practice</h1>
     <div id="instructions">
         Click to place anchor points. Click and drag to create curve handles. 
@@ -309,21 +286,35 @@
             resetCanvas();
         }
 
-        function checkAccuracy() {
-            // This is a simplified accuracy check
-            let score = 0;
-            const totalPoints = 100;
-            for (let i = 0; i < totalPoints; i++) {
-                const t = i / (totalPoints - 1);
-                const goalPoint = getPointOnGoalCurve(t);
-                const userPoint = getPointOnUserCurve(t);
-                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-                if (distance < 10) {
-                    score++;
+         function checkAccuracy() {
+        let score = 0;
+        const totalPoints = 100;
+        for (let i = 0; i < totalPoints; i++) {
+            const t = i / (totalPoints - 1);
+            const goalPoint = getPointOnGoalCurve(t);
+            const userPoint = getPointOnUserCurve(t);
+            const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+                 if (distance < 30) {
+                     score += 1 - (distance / 30);
                 }
             }
-            const accuracy = (score / totalPoints) * 100;
-            document.getElementById('feedback').textContent = `Your curve is approximately ${accuracy.toFixed(1)}% accurate.`;
+            const rawScore = (score / totalPoints) * 100;
+        const adjustedScore = Math.min(10, Math.max(1, Math.ceil(rawScore / 10)));
+        
+        const feedback = [
+            "Keep practicing! You're on the right track.",
+            "Good effort! Try to get closer to the blue line.",
+            "Nice work! You're getting better.",
+            "Well done! Your curves are improving.",
+            "Great job! You're mastering the pen tool.",
+            "Excellent! Your curves are very close.",
+            "Impressive work! You're nearly matching the shape.",
+            "Outstanding! Your control is excellent.",
+            "Amazing precision! You're a pen tool pro.",
+            "Perfect! Your curves match the shape exactly."
+        ];
+
+        document.getElementById('feedback').textContent = `Score: ${adjustedScore}/10 - ${feedback[adjustedScore - 1]}`;
         }
 
         function getPointOnGoalCurve(t) {

@@ -304,49 +304,45 @@
             resetCanvas();
         }
 
-        function checkAccuracy() {
-            let totalDistance = 0;
-            const totalPoints = 100;
+function checkAccuracy() {
+    let totalDistance = 0;
+    const totalPoints = 100;
 
-            for (let i = 0; i < totalPoints; i++) {
-                const t = i / (totalPoints - 1);
-                const goalPoint = getPointOnGoalCurve(t);
-                const userPoint = getPointOnUserCurve(t);
-                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-                totalDistance += distance;
-            }
+    for (let i = 0; i < totalPoints; i++) {
+        const t = i / (totalPoints - 1);
+        const goalPoint = getPointOnGoalCurve(t);
+        const userPoint = getPointOnUserCurve(t);
+        const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+        totalDistance += distance;
+    }
 
-            const averageDistance = totalDistance / totalPoints;
-            const maxAllowedDistance = 50;
-            let score = 10 - (averageDistance / maxAllowedDistance) * 9;
-            score = Math.max(1, Math.min(10, Math.round(score)));
+    const averageDistance = totalDistance / totalPoints;
+    const maxAllowedDistance = 100; // Increased from 50 to 100
+    let score = 10 - (averageDistance / maxAllowedDistance) * 5; // Changed from 9 to 5
+    score = Math.max(5, Math.min(10, Math.round(score))); // Minimum score is now 5
 
-            const feedback = [
-                "Great start! You're beginning to grasp the pen tool. Keep practicing!",
-                "Nice attempt! Try to follow the blue line more closely.",
-                "Good effort! Your curves are taking shape. Keep refining!",
-                "Well done! You're getting the hang of it. Focus on smoother curves.",
-                "Impressive progress! Your shape is becoming more accurate.",
-                "Excellent work! Your curves are very close to the target.",
-                "Outstanding control! You're nearly matching the shape perfectly.",
-                "Amazing precision! You're mastering the pen tool.",
-                "Exceptional skill! Your curves are almost indistinguishable from the goal.",
-                "Perfect! Your mastery of the pen tool is evident. Fantastic job!"
-            ];
+    const feedback = [
+        "Great start! You're doing well with the pen tool. Keep practicing!",
+        "Nice work! Your curves are taking shape nicely.",
+        "Well done! You're showing good control of the pen tool.",
+        "Impressive effort! Your shape is very close to the target.",
+        "Excellent job! Your curves match the goal shape closely.",
+        "Outstanding precision! You're mastering the pen tool."
+    ];
 
-            let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 1]}\n\n`;
-            detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
-            detailedFeedback += "Tip: " + getTip(score);
+    let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 5]}\n\n`;
+    detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
+    detailedFeedback += "Tip: " + getTip(score);
 
-            document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
-        }
+    document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
+}
 
-        function getTip(score) {
-            if (score <= 3) return "Try using fewer anchor points and focus on the overall shape.";
-            if (score <= 6) return "Adjust your curve handles to smooth out the lines.";
-            if (score <= 9) return "Fine-tune your anchor point positions for perfect symmetry.";
-            return "Challenge yourself with more complex shapes!";
-        }
+function getTip(score) {
+    if (score <= 6) return "Try adjusting your curve handles for smoother lines.";
+    if (score <= 8) return "Fine-tune your anchor point positions for even better accuracy.";
+    if (score <= 9) return "Great job! Try to match the symmetry of the target shape.";
+    return "Fantastic work! Challenge yourself with more complex shapes!";
+}
 
         function getPointOnGoalCurve(t) {
             switch(currentShape) {

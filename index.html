@@ -133,20 +133,20 @@
             }
         }
 
-        function startDrawing(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // Check if we're close to the first point to close the path
-            if (path.length > 2) {
-                const firstPoint = path[0];
-                const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
-                if (distance < 20) {
-                    closePath();
-                    return;
-                }
-            }
+function startDrawing(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if we're close to the first point to close the path
+    if (path.length > 2) {
+        const firstPoint = path[0];
+        const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+        if (distance < 30) {  // Increased from 20 to 30 for easier closing
+            closePath();
+            return;
+        }
+    }
             
             // Check if we're clicking on an existing point
             for (let i = 0; i < path.length; i++) {
@@ -198,16 +198,20 @@ function closePath() {
         const firstPoint = path[0];
         const lastPoint = path[path.length - 1];
         
-        // Instead of adding a new point, just mark the first point as closed
         firstPoint.isClosed = true;
         
-        // If the last point has a handleOut, use it to set the first point's handleIn
-        if (lastPoint.handleOut) {
+        // Only adjust the first point's handleIn if it doesn't exist
+        if (!firstPoint.handleIn && lastPoint.handleOut) {
             firstPoint.handleIn = {
                 x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
                 y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
             };
         }
+        
+        drawPath();
+        isDrawing = false;
+    }
+}
         
         drawPath();
         isDrawing = false;

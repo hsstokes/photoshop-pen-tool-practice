@@ -74,8 +74,7 @@
     <div id="instructions">
         Click to place anchor points. Click and drag to create curve handles. 
         Try to recreate the blue curve shape as closely as possible!<br>
-        Hold Option (Alt) key while creating or adjusting handles for asymmetrical curves.<br>
-        To close the path, click on the first point when you're done drawing.
+        Hold Option (Alt) key while creating or adjusting handles for asymmetrical curves.
     </div>
     <div id="shapeSelector">
         <label for="shapes">Choose a shape:</label>
@@ -113,7 +112,6 @@
         let currentHandle = null;
         let isAltKeyPressed = false;
         let currentShape = "infinity";
-        let activePoint = null;
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
@@ -134,150 +132,114 @@
         }
 
         function startDrawing(e) {
+            isDrawing = true;
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // Check if we're close to the first point to close the path
-            if (path.length > 2) {
-                const firstPoint = path[0];
-                const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
-                if (distance < 30) {  // Increased from 20 to 30 for easier closing
-                    closePath();
-                    return;
-                }
-            }
+            const distanceThreshold = 10; // pixels
             
-            // Check if we're clicking on an existing point
-            for (let i = 0; i < path.length; i++) {
-                const point = path[i];
-                if (Math.abs(x - point.x) < 10 && Math.abs(y - point.y) < 10) {
-                    activePoint = point;
-                    isDrawing = true;
+            if (path.length === 0) {
+                // First point
+                path.push({x, y, handleIn: null, handleOut: {x, y}});
+            } else {
+                const lastPoint = path[path.length - 1];
+                const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+                
+                if (distance < distanceThreshold) {
+                    // Adjusting handle of existing point
                     currentHandle = 'handleOut';
-                    return;
+                } else {
+                    // New point
+                    path.push({x, y, handleIn: null, handleOut: {x, y}});
                 }
             }
-            
-            // If not, create a new point
-            activePoint = {x, y, handleIn: null, handleOut: null};
-            path.push(activePoint);
-            isDrawing = true;
-            currentHandle = 'handleOut';
-            
             drawPath();
         }
 
         function draw(e) {
-            if (!isDrawing || !activePoint) return;
+            if (!isDrawing) return;
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            if (currentHandle) {
-                activePoint[currentHandle] = {x, y};
-                if (!isAltKeyPressed) {
-                    const oppositeHandle = currentHandle === 'handleOut' ? 'handleIn' : 'handleOut';
-                    activePoint[oppositeHandle] = {
-                        x: activePoint.x - (activePoint[currentHandle].x - activePoint.x),
-                        y: activePoint.y - (activePoint[currentHandle].y - activePoint.y)
-                    };
+            if (path.length > 0) {
+                const lastPoint = path[path.length - 1];
+                if (currentHandle) {
+                    lastPoint[currentHandle] = {x, y};
+                    if (currentHandle === 'handleOut' && !isAltKeyPressed) {
+                        lastPoint.handleIn = {
+                            x: lastPoint.x - (lastPoint.handleOut.x - lastPoint.x),
+                            y: lastPoint.y - (lastPoint.handleOut.y - lastPoint.y)
+                        };
+                    }
+                } else {
+                    // Always update handleOut when dragging
+                    lastPoint.handleOut = {x, y};
+                    if (!isAltKeyPressed) {
+                        lastPoint.handleIn = {
+                            x: lastPoint.x - (x - lastPoint.x),
+                            y: lastPoint.y - (y - lastPoint.y)
+                        };
+                    }
                 }
+                drawPath();
             }
-            
-            drawPath();
         }
 
         function stopDrawing() {
             isDrawing = false;
-            activePoint = null;
-        }
-
-        function closePath() {
-            if (path.length > 2) {
-                const firstPoint = path[0];
-                const lastPoint = path[path.length - 1];
-                
-                firstPoint.isClosed = true;
-                
-                // Only adjust the first point's handleIn if it doesn't exist
-                if (!firstPoint.handleIn && lastPoint.handleOut) {
-                    firstPoint.handleIn = {
-                        x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
-                        y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
-                    };
-                }
-                
-                drawPath();
-                isDrawing = false;
-            }
+            currentHandle = null;
         }
 
         function drawPath() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawGoalShape();
-            
-            if (path.length > 0) {
-                ctx.beginPath();
-                ctx.moveTo(path[0].x, path[0].y);
-                
-                for (let i = 1; i < path.length; i++) {
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                if (i === 0) {
+                    ctx.moveTo(path[i].x, path[i].y);
+                } else {
                     const prev = path[i-1];
                     const curr = path[i];
-                    
-                    const prevOut = prev.handleOut || {x: prev.x, y: prev.y};
-                    const currIn = curr.handleIn || {x: curr.x, y: curr.y};
-                    
-                    ctx.bezierCurveTo(
-                        prevOut.x, prevOut.y,
-                        currIn.x, currIn.y,
-                        curr.x, curr.y
-                    );
-                }
-                
-                if (path[0].isClosed) {
-                    const lastPoint = path[path.length - 1];
-                    const firstPoint = path[0];
-                    const lastOut = lastPoint.handleOut || {x: lastPoint.x, y: lastPoint.y};
-                    const firstIn = firstPoint.handleIn || {x: firstPoint.x, y: firstPoint.y};
-                    
-                    ctx.bezierCurveTo(
-                        lastOut.x, lastOut.y,
-                        firstIn.x, firstIn.y,
-                        firstPoint.x, firstPoint.y
-                    );
-                }
-                
-                ctx.stroke();
-
-                // Draw handles and points
-                ctx.fillStyle = 'red';
-                path.forEach((point, index) => {
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    if (point.handleOut) {
-                        ctx.beginPath();
-                        ctx.moveTo(point.x, point.y);
-                        ctx.lineTo(point.handleOut.x, point.handleOut.y);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
-                        ctx.fill();
+                    if (prev.handleOut && curr.handleIn) {
+                        ctx.bezierCurveTo(
+                            prev.handleOut.x, prev.handleOut.y,
+                            curr.handleIn.x, curr.handleIn.y,
+                            curr.x, curr.y
+                        );
+                    } else {
+                        ctx.lineTo(curr.x, curr.y);
                     }
-                    
-                    if (point.handleIn) {
-                        ctx.beginPath();
-                        ctx.moveTo(point.x, point.y);
-                        ctx.lineTo(point.handleIn.x, point.handleIn.y);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
+                }
             }
+            ctx.stroke();
+
+            // Draw handles
+            ctx.fillStyle = 'red';
+            path.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                if (point.handleOut) {
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(point.handleOut.x, point.handleOut.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                if (point.handleIn) {
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(point.handleIn.x, point.handleIn.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
         }
 
         function undoLastPoint() {
@@ -324,8 +286,7 @@
             currentShape = document.getElementById('shapes').value;
             resetCanvas();
         }
-
-        function checkAccuracy() {
+function checkAccuracy() {
     let totalDistance = 0;
     const totalPoints = 100;
 
@@ -366,6 +327,13 @@
             if (score <= 8) return "Fine-tune your anchor point positions for even better accuracy.";
             if (score <= 9) return "Great job! Try to match the symmetry of the target shape.";
             return "Fantastic work! Challenge yourself with more complex shapes!";
+        }
+
+        function getTip(score) {
+            if (score <= 3) return "Try using fewer anchor points and focus on the overall shape.";
+            if (score <= 6) return "Adjust your curve handles to smooth out the lines.";
+            if (score <= 9) return "Fine-tune your anchor point positions for perfect symmetry.";
+            return "Challenge yourself with more complex shapes!";
         }
 
         function getPointOnGoalCurve(t) {

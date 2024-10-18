@@ -194,24 +194,31 @@
         }
 
         function closePath() {
-            if (path.length > 2) {
-                const firstPoint = path[0];
-                const lastPoint = path[path.length - 1];
-                
-                firstPoint.isClosed = true;
-                
-                // Only adjust the first point's handleIn if it doesn't exist
-                if (!firstPoint.handleIn && lastPoint.handleOut) {
-                    firstPoint.handleIn = {
-                        x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
-                        y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
-                    };
-                }
-                
-                drawPath();
-                isDrawing = false;
-            }
+    if (path.length > 2) {
+        const firstPoint = path[0];
+        const lastPoint = path[path.length - 1];
+        
+        firstPoint.isClosed = true;
+        
+        // Adjust the first point's handleIn and last point's handleOut
+        if (!firstPoint.handleIn) {
+            firstPoint.handleIn = {
+                x: firstPoint.x - (lastPoint.x - firstPoint.x) / 3,
+                y: firstPoint.y - (lastPoint.y - firstPoint.y) / 3
+            };
         }
+        
+        if (!lastPoint.handleOut) {
+            lastPoint.handleOut = {
+                x: lastPoint.x + (firstPoint.x - lastPoint.x) / 3,
+                y: lastPoint.y + (firstPoint.y - lastPoint.y) / 3
+            };
+        }
+        
+        drawPath();
+        isDrawing = false;
+    }
+}
 
         function drawPath() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);

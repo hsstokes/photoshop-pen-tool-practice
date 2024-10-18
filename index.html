@@ -326,37 +326,40 @@
         }
 
         function checkAccuracy() {
-            let totalDistance = 0;
-            const totalPoints = 100;
+    let totalDistance = 0;
+    const totalPoints = 100;
 
-            for (let i = 0; i < totalPoints; i++) {
-                const t = i / (totalPoints - 1);
-                const goalPoint = getPointOnGoalCurve(t);
-                const userPoint = getPointOnUserCurve(t);
-                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-                totalDistance += distance;
-            }
+    for (let i = 0; i < totalPoints; i++) {
+        const t = i / (totalPoints - 1);
+        const goalPoint = getPointOnGoalCurve(t);
+        const userPoint = getPointOnUserCurve(t);
+        const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+        totalDistance += distance;
+    }
 
-            const averageDistance = totalDistance / totalPoints;
-            const maxAllowedDistance = 100; // Increased from 50 to 100
-            let score = 10 - (averageDistance / maxAllowedDistance) * 5; // Changed from 9 to 5
-            score = Math.max(5, Math.min(10, Math.round(score))); // Minimum score is now 5
+    const averageDistance = totalDistance / totalPoints;
+    const maxAllowedDistance = 100;
+    let score = 10 - (averageDistance / maxAllowedDistance) * 5;
+    score = Math.max(5, Math.min(10, Math.round(score)));
 
-            const feedback = [
-                "Great start! You're doing well with the pen tool. Keep practicing!",
-                "Nice work! Your curves are taking shape nicely.",
-                "Well done! You're showing good control of the pen tool.",
-                "Impressive effort! Your shape is very close to the target.",
-                "Excellent job! Your curves match the goal shape closely.",
-                "Outstanding precision! You're mastering the pen tool."
-            ];
+    const feedback = [
+        "Great start! You're doing well with the pen tool. Keep practicing!",
+        "Nice work! Your curves are taking shape nicely.",
+        "Well done! You're showing good control of the pen tool.",
+        "Impressive effort! Your shape is very close to the target.",
+        "Excellent job! Your curves match the goal shape closely.",
+        "Outstanding precision! You're mastering the pen tool."
+    ];
 
-            let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 5]}\n\n`;
-            detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
-            detailedFeedback += "Tip: " + getTip(score);
+    let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 5]}\n\n`;
+    detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
+    // Removed the Tip line
 
-            document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
-        }
+    document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
+}
+
+// Remove or comment out the getTip function as it's no longer used
+// function getTip(score) { ... }        }
 
         function getTip(score) {
             if (score <= 6) return "Try adjusting your curve handles for smoother lines.";

@@ -133,20 +133,20 @@
             }
         }
 
-function startDrawing(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Check if we're close to the first point to close the path
-    if (path.length > 2) {
-        const firstPoint = path[0];
-        const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
-        if (distance < 30) {  // Increased from 20 to 30 for easier closing
-            closePath();
-            return;
-        }
-    }
+        function startDrawing(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Check if we're close to the first point to close the path
+            if (path.length > 2) {
+                const firstPoint = path[0];
+                const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+                if (distance < 30) {  // Increased from 20 to 30 for easier closing
+                    closePath();
+                    return;
+                }
+            }
             
             // Check if we're clicking on an existing point
             for (let i = 0; i < path.length; i++) {
@@ -193,67 +193,62 @@ function startDrawing(e) {
             activePoint = null;
         }
 
-function closePath() {
-    if (path.length > 2) {
-        const firstPoint = path[0];
-        const lastPoint = path[path.length - 1];
-        
-        firstPoint.isClosed = true;
-        
-        // Only adjust the first point's handleIn if it doesn't exist
-        if (!firstPoint.handleIn && lastPoint.handleOut) {
-            firstPoint.handleIn = {
-                x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
-                y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
-            };
+        function closePath() {
+            if (path.length > 2) {
+                const firstPoint = path[0];
+                const lastPoint = path[path.length - 1];
+                
+                firstPoint.isClosed = true;
+                
+                // Only adjust the first point's handleIn if it doesn't exist
+                if (!firstPoint.handleIn && lastPoint.handleOut) {
+                    firstPoint.handleIn = {
+                        x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
+                        y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
+                    };
+                }
+                
+                drawPath();
+                isDrawing = false;
+            }
         }
-        
-        drawPath();
-        isDrawing = false;
-    }
-}
-        
-        drawPath();
-        isDrawing = false;
-    }
-}
 
         function drawPath() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawGoalShape();
             
             if (path.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        
-        for (let i = 1; i < path.length; i++) {
-            const prev = path[i-1];
-            const curr = path[i];
-            
-            const prevOut = prev.handleOut || {x: prev.x, y: prev.y};
-            const currIn = curr.handleIn || {x: curr.x, y: curr.y};
-            
-            ctx.bezierCurveTo(
-                prevOut.x, prevOut.y,
-                currIn.x, currIn.y,
-                curr.x, curr.y
-            );
-        }
+                ctx.beginPath();
+                ctx.moveTo(path[0].x, path[0].y);
                 
-        if (path[0].isClosed) {
-            const lastPoint = path[path.length - 1];
-            const firstPoint = path[0];
-            const lastOut = lastPoint.handleOut || {x: lastPoint.x, y: lastPoint.y};
-            const firstIn = firstPoint.handleIn || {x: firstPoint.x, y: firstPoint.y};
-            
-            ctx.bezierCurveTo(
-                lastOut.x, lastOut.y,
-                firstIn.x, firstIn.y,
-                firstPoint.x, firstPoint.y
-            );
-        }
-        
-        ctx.stroke();
+                for (let i = 1; i < path.length; i++) {
+                    const prev = path[i-1];
+                    const curr = path[i];
+                    
+                    const prevOut = prev.handleOut || {x: prev.x, y: prev.y};
+                    const currIn = curr.handleIn || {x: curr.x, y: curr.y};
+                    
+                    ctx.bezierCurveTo(
+                        prevOut.x, prevOut.y,
+                        currIn.x, currIn.y,
+                        curr.x, curr.y
+                    );
+                }
+                
+                if (path[0].isClosed) {
+                    const lastPoint = path[path.length - 1];
+                    const firstPoint = path[0];
+                    const lastOut = lastPoint.handleOut || {x: lastPoint.x, y: lastPoint.y};
+                    const firstIn = firstPoint.handleIn || {x: firstPoint.x, y: firstPoint.y};
+                    
+                    ctx.bezierCurveTo(
+                        lastOut.x, lastOut.y,
+                        firstIn.x, firstIn.y,
+                        firstPoint.x, firstPoint.y
+                    );
+                }
+                
+                ctx.stroke();
 
                 // Draw handles and points
                 ctx.fillStyle = 'red';
@@ -330,45 +325,45 @@ function closePath() {
             resetCanvas();
         }
 
-function checkAccuracy() {
-    let totalDistance = 0;
-    const totalPoints = 100;
+        function checkAccuracy() {
+            let totalDistance = 0;
+            const totalPoints = 100;
 
-    for (let i = 0; i < totalPoints; i++) {
-        const t = i / (totalPoints - 1);
-        const goalPoint = getPointOnGoalCurve(t);
-        const userPoint = getPointOnUserCurve(t);
-        const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-        totalDistance += distance;
-    }
+            for (let i = 0; i < totalPoints; i++) {
+                const t = i / (totalPoints - 1);
+                const goalPoint = getPointOnGoalCurve(t);
+                const userPoint = getPointOnUserCurve(t);
+                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+                totalDistance += distance;
+            }
 
-    const averageDistance = totalDistance / totalPoints;
-    const maxAllowedDistance = 100; // Increased from 50 to 100
-    let score = 10 - (averageDistance / maxAllowedDistance) * 5; // Changed from 9 to 5
-    score = Math.max(5, Math.min(10, Math.round(score))); // Minimum score is now 5
+            const averageDistance = totalDistance / totalPoints;
+            const maxAllowedDistance = 100; // Increased from 50 to 100
+            let score = 10 - (averageDistance / maxAllowedDistance) * 5; // Changed from 9 to 5
+            score = Math.max(5, Math.min(10, Math.round(score))); // Minimum score is now 5
 
-    const feedback = [
-        "Great start! You're doing well with the pen tool. Keep practicing!",
-        "Nice work! Your curves are taking shape nicely.",
-        "Well done! You're showing good control of the pen tool.",
-        "Impressive effort! Your shape is very close to the target.",
-        "Excellent job! Your curves match the goal shape closely.",
-        "Outstanding precision! You're mastering the pen tool."
-    ];
+            const feedback = [
+                "Great start! You're doing well with the pen tool. Keep practicing!",
+                "Nice work! Your curves are taking shape nicely.",
+                "Well done! You're showing good control of the pen tool.",
+                "Impressive effort! Your shape is very close to the target.",
+                "Excellent job! Your curves match the goal shape closely.",
+                "Outstanding precision! You're mastering the pen tool."
+            ];
 
-    let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 5]}\n\n`;
-    detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
-    detailedFeedback += "Tip: " + getTip(score);
+            let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 5]}\n\n`;
+            detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
+            detailedFeedback += "Tip: " + getTip(score);
 
-    document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
-}
+            document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
+        }
 
-function getTip(score) {
-    if (score <= 6) return "Try adjusting your curve handles for smoother lines.";
-    if (score <= 8) return "Fine-tune your anchor point positions for even better accuracy.";
-    if (score <= 9) return "Great job! Try to match the symmetry of the target shape.";
-    return "Fantastic work! Challenge yourself with more complex shapes!";
-}
+        function getTip(score) {
+            if (score <= 6) return "Try adjusting your curve handles for smoother lines.";
+            if (score <= 8) return "Fine-tune your anchor point positions for even better accuracy.";
+            if (score <= 9) return "Great job! Try to match the symmetry of the target shape.";
+            return "Fantastic work! Challenge yourself with more complex shapes!";
+        }
 
         function getPointOnGoalCurve(t) {
             switch(currentShape) {

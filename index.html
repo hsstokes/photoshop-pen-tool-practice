@@ -130,117 +130,125 @@
                 isAltKeyPressed = false;
             }
         }
-
         function startDrawing(e) {
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const distanceThreshold = 10; // pixels
-            
-            if (path.length === 0) {
-                // First point
-                path.push({x, y, handleIn: null, handleOut: {x, y}});
-            } else {
-                const lastPoint = path[path.length - 1];
-                const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
-                
-                if (distance < distanceThreshold) {
-                    // Adjusting handle of existing point
-                    currentHandle = 'handleOut';
-                } else {
-                    // New point
-                    path.push({x, y, handleIn: null, handleOut: {x, y}});
-                }
-            }
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (resetHandle(x, y)) {
+        drawPath();
+        return;
+    }
+    
+    if (path.length > 1) {
+        const firstPoint = path[0];
+        const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+        
+        if (distance < 10) {
+            // Close the path
+            path.push({...firstPoint});
+            isDrawing = false;
             drawPath();
+            return;
         }
-
+    }
+    drawPath();
+}
         function draw(e) {
-            if (!isDrawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            if (path.length > 0) {
-                const lastPoint = path[path.length - 1];
-                if (currentHandle) {
-                    lastPoint[currentHandle] = {x, y};
-                    if (currentHandle === 'handleOut' && !isAltKeyPressed) {
-                        lastPoint.handleIn = {
-                            x: lastPoint.x - (lastPoint.handleOut.x - lastPoint.x),
-                            y: lastPoint.y - (lastPoint.handleOut.y - lastPoint.y)
-                        };
-                    }
-                } else {
-                    // Always update handleOut when dragging
-                    lastPoint.handleOut = {x, y};
-                    if (!isAltKeyPressed) {
-                        lastPoint.handleIn = {
-                            x: lastPoint.x - (x - lastPoint.x),
-                            y: lastPoint.y - (y - lastPoint.y)
-                        };
-                    }
-                }
-                drawPath();
+    if (!isDrawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (path.length > 0) {
+        const lastPoint = path[path.length - 1];
+        if (currentHandle) {
+            lastPoint[currentHandle] = {x, y};
+            if (currentHandle === 'handleOut' && !isAltKeyPressed) {
+                lastPoint.handleIn = {
+                    x: lastPoint.x - (lastPoint.handleOut.x - lastPoint.x),
+                    y: lastPoint.y - (lastPoint.handleOut.y - lastPoint.y)
+                };
+            }
+        } else {
+            lastPoint.handleOut = {x, y};
+            if (!isAltKeyPressed) {
+                lastPoint.handleIn = {
+                    x: lastPoint.x - (x - lastPoint.x),
+                    y: lastPoint.y - (y - lastPoint.y)
+                };
             }
         }
-
+        drawPath();
+    }
+}
         function stopDrawing() {
             isDrawing = false;
             currentHandle = null;
         }
-
-        function drawPath() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawGoalShape();
-            ctx.beginPath();
-            for (let i = 0; i < path.length; i++) {
-                if (i === 0) {
-                    ctx.moveTo(path[i].x, path[i].y);
-                } else {
-                    const prev = path[i-1];
-                    const curr = path[i];
-                    if (prev.handleOut && curr.handleIn) {
-                        ctx.bezierCurveTo(
-                            prev.handleOut.x, prev.handleOut.y,
-                            curr.handleIn.x, curr.handleIn.y,
-                            curr.x, curr.y
-                        );
-                    } else {
-                        ctx.lineTo(curr.x, curr.y);
-                    }
-                }
+         // Add the new resetHandle function here
+    function resetHandle(x, y) {
+        for (let i = 0; i < path.length; i++) {
+            const point = path[i];
+            const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+            if (distance < 10) {  // 10px threshold for clicking on a point
+                point.handleIn = null;
+                point.handleOut = {x: point.x, y: point.y};
+                return true;
             }
-            ctx.stroke();
-
-            // Draw handles
-            ctx.fillStyle = 'red';
-            path.forEach(point => {
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-                if (point.handleOut) {
-                    ctx.beginPath();
-                    ctx.moveTo(point.x, point.y);
-                    ctx.lineTo(point.handleOut.x, point.handleOut.y);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                if (point.handleIn) {
-                    ctx.beginPath();
-                    ctx.moveTo(point.x, point.y);
-                    ctx.lineTo(point.handleIn.x, point.handleIn.y);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            });
         }
+        return false;
+    }
+      function drawPath() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGoalShape();
+    
+    if (path.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+            const prev = path[i-1];
+            const curr = path[i];
+            if (prev.handleOut && curr.handleIn) {
+                ctx.bezierCurveTo(
+                    prev.handleOut.x, prev.handleOut.y,
+                    curr.handleIn.x, curr.handleIn.y,
+                    curr.x, curr.y
+                );
+            } else {
+                ctx.lineTo(curr.x, curr.y);
+            }
+        }
+        ctx.stroke();
+
+        // Draw handles
+        ctx.fillStyle = 'red';
+        path.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            if (point.handleOut) {
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(point.handleOut.x, point.handleOut.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            if (point.handleIn) {
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(point.handleIn.x, point.handleIn.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+}
 
         function undoLastPoint() {
             path.pop();
@@ -287,60 +295,42 @@
             resetCanvas();
         }
 
-        function checkAccuracy() {
-            let score = 0;
-            const totalPoints = 100;
-            let closestDistance = Infinity;
-            let furthestDistance = 0;
-            let averageDistance = 0;
+  function checkAccuracy() {
+    let totalDistance = 0;
+    const totalPoints = 100;
 
-            for (let i = 0; i < totalPoints; i++) {
-                const t = i / (totalPoints - 1);
-                const goalPoint = getPointOnGoalCurve(t);
-                const userPoint = getPointOnUserCurve(t);
-                const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
-                
-                closestDistance = Math.min(closestDistance, distance);
-                furthestDistance = Math.max(furthestDistance, distance);
-                averageDistance += distance;
-                if (distance < 50) {
-                    score += 1 - (distance / 50);
-                }
-            }
-            averageDistance /= totalPoints;
+    for (let i = 0; i < totalPoints; i++) {
+        const t = i / (totalPoints - 1);
+        const goalPoint = getPointOnGoalCurve(t);
+        const userPoint = getPointOnUserCurve(t);
+        const distance = Math.sqrt(Math.pow(goalPoint.x - userPoint.x, 2) + Math.pow(goalPoint.y - userPoint.y, 2));
+        totalDistance += distance;
+    }
 
-            // Base score for attempt
-            let baseScore = 3;
-            
-            // Additional points for overall shape resemblance
-            const shapeScore = Math.max(0, 5 - (averageDistance / 20));
-            
-            // Points for consistency
-            const consistencyScore = Math.max(0, 2 - ((furthestDistance - closestDistance) / 50));
-            
-            // Calculate final score
-            const finalScore = Math.min(10, Math.max(1, Math.round(baseScore + shapeScore + consistencyScore)));
+    const averageDistance = totalDistance / totalPoints;
+    const maxAllowedDistance = 50; // maximum average distance for a score of 1
+    let score = 10 - (averageDistance / maxAllowedDistance) * 9;
+    score = Math.max(1, Math.min(10, Math.round(score)));
 
-            const feedback = [
-                "Great start! You're beginning to grasp the pen tool. Keep practicing!",
-                "Nice attempt! Try to follow the blue line more closely.",
-                "Good effort! Your curves are taking shape. Keep refining!",
-                "Well done! You're getting the hang of it. Focus on smoother curves.",
-                "Impressive progress! Your shape is becoming more accurate.",
-                "Excellent work! Your curves are very close to the target.",
-                "Outstanding control! You're nearly matching the shape perfectly.",
-                "Amazing precision! You're mastering the pen tool.",
-                "Exceptional skill! Your curves are almost indistinguishable from the goal.",
-                "Perfect! Your mastery of the pen tool is evident. Fantastic job!"
-            ];
+    const feedback = [
+        "Great start! You're beginning to grasp the pen tool. Keep practicing!",
+        "Nice attempt! Try to follow the blue line more closely.",
+        "Good effort! Your curves are taking shape. Keep refining!",
+        "Well done! You're getting the hang of it. Focus on smoother curves.",
+        "Impressive progress! Your shape is becoming more accurate.",
+        "Excellent work! Your curves are very close to the target.",
+        "Outstanding control! You're nearly matching the shape perfectly.",
+        "Amazing precision! You're mastering the pen tool.",
+        "Exceptional skill! Your curves are almost indistinguishable from the goal.",
+        "Perfect! Your mastery of the pen tool is evident. Fantastic job!"
+    ];
 
-            let detailedFeedback = `Score: ${finalScore}/10 - ${feedback[finalScore - 1]}\n\n`;
-            detailedFeedback += `Shape Accuracy: ${Math.round(shapeScore * 20)}%\n`;
-            detailedFeedback += `Curve Consistency: ${Math.round(consistencyScore * 50)}%\n\n`;
-            detailedFeedback += "Tip: " + getTip(finalScore);
+    let detailedFeedback = `Score: ${score}/10 - ${feedback[score - 1]}\n\n`;
+    detailedFeedback += `Average Distance: ${Math.round(averageDistance)}px\n`;
+    detailedFeedback += "Tip: " + getTip(score);
 
-            document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
-        }
+    document.getElementById('feedback').innerHTML = detailedFeedback.replace(/\n/g, '<br>');
+}
 
         function getTip(score) {
             if (score <= 3) return "Try using fewer anchor points and focus on the overall shape.";

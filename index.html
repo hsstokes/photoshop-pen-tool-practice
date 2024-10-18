@@ -74,7 +74,8 @@
     <div id="instructions">
         Click to place anchor points. Click and drag to create curve handles. 
         Try to recreate the blue curve shape as closely as possible!<br>
-        Hold Option (Alt) key while creating or adjusting handles for asymmetrical curves.
+        Hold Option (Alt) key while creating or adjusting handles for asymmetrical curves.<br>
+        To close the path, click on the first point when you're done drawing.
     </div>
     <div id="shapeSelector">
         <label for="shapes">Choose a shape:</label>
@@ -142,9 +143,7 @@
                 const firstPoint = path[0];
                 const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
                 if (distance < 20) {
-                    path.push({...firstPoint, isClosed: true});
-                    drawPath();
-                    isDrawing = false;
+                    closePath();
                     return;
                 }
             }
@@ -192,6 +191,14 @@
         function stopDrawing() {
             isDrawing = false;
             activePoint = null;
+        }
+
+        function closePath() {
+            if (path.length > 2) {
+                path.push({...path[0], isClosed: true});
+                drawPath();
+                isDrawing = false;
+            }
         }
 
         function drawPath() {

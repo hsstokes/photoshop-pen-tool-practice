@@ -137,14 +137,14 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-    
+            
             // Check if we're close to the first point to close the path
             if (path.length > 2) {
                 const firstPoint = path[0];
                 const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
-        if (distance < 30) {  // Increased from 20 to 30 for easier closing
-            closePath();
-            return;
+                if (distance < 30) {  // Increased from 20 to 30 for easier closing
+                    closePath();
+                    return;
                 }
             }
             
@@ -194,67 +194,91 @@
         }
 
         function closePath() {
-    if (path.length > 2) {
-        const firstPoint = path[0];
-        const lastPoint = path[path.length - 1];
-        
-        firstPoint.isClosed = true;
-        
-        // Adjust the first point's handleIn and last point's handleOut
-        if (!firstPoint.handleIn) {
-            firstPoint.handleIn = {
-                x: firstPoint.x - (lastPoint.x - firstPoint.x) / 3,
-                y: firstPoint.y - (lastPoint.y - firstPoint.y) / 3
-            };
-        }
-        
-        if (!lastPoint.handleOut) {
-            lastPoint.handleOut = {
-                x: lastPoint.x + (firstPoint.x - lastPoint.x) / 3,
-                y: lastPoint.y + (firstPoint.y - lastPoint.y) / 3
-            };
-        }
-        
-        drawPath();
-        isDrawing = false;
-    }
-}
-
-      function drawPath() {
-    // ... (keep the existing code for clearing and drawing the path)
-
-    // Draw points and handles
-    ctx.fillStyle = 'red';
-    path.forEach((point, index) => {
-        // Draw all points
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Only draw handles for the last point
-        if (index === path.length - 1) {
-            if (point.handleOut) {
-                ctx.beginPath();
-                ctx.moveTo(point.x, point.y);
-                ctx.lineTo(point.handleOut.x, point.handleOut.y);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
-                ctx.fill();
+            if (path.length > 2) {
+                const firstPoint = path[0];
+                const lastPoint = path[path.length - 1];
+                
+                firstPoint.isClosed = true;
+                
+                // Only adjust the first point's handleIn if it doesn't exist
+                if (!firstPoint.handleIn && lastPoint.handleOut) {
+                    firstPoint.handleIn = {
+                        x: firstPoint.x - (lastPoint.handleOut.x - lastPoint.x),
+                        y: firstPoint.y - (lastPoint.handleOut.y - lastPoint.y)
+                    };
+                }
+                
+                drawPath();
+                isDrawing = false;
             }
+        }
+
+        function drawPath() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGoalShape();
             
-            if (point.handleIn) {
+            if (path.length > 0) {
                 ctx.beginPath();
-                ctx.moveTo(point.x, point.y);
-                ctx.lineTo(point.handleIn.x, point.handleIn.y);
+                ctx.moveTo(path[0].x, path[0].y);
+                
+                for (let i = 1; i < path.length; i++) {
+                    const prev = path[i-1];
+                    const curr = path[i];
+                    
+                    const prevOut = prev.handleOut || {x: prev.x, y: prev.y};
+                    const currIn = curr.handleIn || {x: curr.x, y: curr.y};
+                    
+                    ctx.bezierCurveTo(
+                        prevOut.x, prevOut.y,
+                        currIn.x, currIn.y,
+                        curr.x, curr.y
+                    );
+                }
+                
+                if (path[0].isClosed) {
+                    const lastPoint = path[path.length - 1];
+                    const firstPoint = path[0];
+                    const lastOut = lastPoint.handleOut || {x: lastPoint.x, y: lastPoint.y};
+                    const firstIn = firstPoint.handleIn || {x: firstPoint.x, y: firstPoint.y};
+                    
+                    ctx.bezierCurveTo(
+                        lastOut.x, lastOut.y,
+                        firstIn.x, firstIn.y,
+                        firstPoint.x, firstPoint.y
+                    );
+                }
+                
                 ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
-                ctx.fill();
+
+                // Draw handles and points
+                ctx.fillStyle = 'red';
+                path.forEach((point, index) => {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (point.handleOut) {
+                        ctx.beginPath();
+                        ctx.moveTo(point.x, point.y);
+                        ctx.lineTo(point.handleOut.x, point.handleOut.y);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    if (point.handleIn) {
+                        ctx.beginPath();
+                        ctx.moveTo(point.x, point.y);
+                        ctx.lineTo(point.handleIn.x, point.handleIn.y);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
             }
         }
-    });
-}
 
         function undoLastPoint() {
             path.pop();

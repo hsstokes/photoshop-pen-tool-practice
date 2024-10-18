@@ -136,38 +136,37 @@
         }
 
 function startDrawing(e) {
-    isDrawing = true;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    activePoint = null;
+    // Check if we're close to the first point to close the path
+    if (path.length > 1) {
+        const firstPoint = path[0];
+        const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+        if (distance < 20) {
+            path.push({...firstPoint, isClosed: true});
+            drawPath();
+            return;
+        }
+    }
+    
+    // Check if we're clicking on an existing point
     for (let point of path) {
         if (Math.abs(x - point.x) < 10 && Math.abs(y - point.y) < 10) {
             activePoint = point;
-            break;
+            isDrawing = true;
+            currentHandle = 'handleOut';
+            return;
         }
     }
     
-    if (!activePoint) {
-        if (path.length > 1) {
-            const firstPoint = path[0];
-            const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
-            
-            // Increased the distance threshold for closing the path
-            if (distance < 20) {
-                path.push({...firstPoint});
-                isDrawing = false;
-                drawPath();
-                return;
-            }
-        }
-        
-        activePoint = {x, y, handleIn: null, handleOut: null};
-        path.push(activePoint);
-    }
-    
+    // If not, create a new point
+    activePoint = {x, y, handleIn: null, handleOut: null};
+    path.push(activePoint);
+    isDrawing = true;
     currentHandle = 'handleOut';
+    
     drawPath();
 }
 
@@ -179,119 +178,85 @@ function draw(e) {
     
     if (currentHandle) {
         activePoint[currentHandle] = {x, y};
-        if (currentHandle === 'handleOut' && !isAltKeyPressed) {
-            activePoint.handleIn = {
-                x: activePoint.x - (activePoint.handleOut.x - activePoint.x),
-                y: activePoint.y - (activePoint.handleOut.y - activePoint.y)
+        if (!isAltKeyPressed) {
+            const oppositeHandle = currentHandle === 'handleOut' ? 'handleIn' : 'handleOut';
+            activePoint[oppositeHandle] = {
+                x: activePoint.x - (activePoint[currentHandle].x - activePoint.x),
+                y: activePoint.y - (activePoint[currentHandle].y - activePoint.y)
             };
-        } else if (isAltKeyPressed) {
-            // Only set the current handle, don't mirror it
-            activePoint[currentHandle] = {x, y};
         }
     }
+    
+    // Ensure the first point always has handles
+    if (path.length === 1) {
+        path[0].handleIn = {x: path[0].x, y: path[0].y};
+        path[0].handleOut = {x: path[0].x, y: path[0].y};
+    }
+    
     drawPath();
 }
 
-function handleKeyDown(e) {
-    if (e.key === 'Alt' || e.key === 'Option') {
-        isAltKeyPressed = true;
-        if (activePoint && currentHandle) {
-            // Store the opposite handle
-            const oppositeHandle = currentHandle === 'handleOut' ? 'handleIn' : 'handleOut';
-            activePoint[oppositeHandle] = {...activePoint[oppositeHandle]};
-        }
-    }
-}
-
-function handleKeyUp(e) {
-    if (e.key === 'Alt' || e.key === 'Option') {
-        isAltKeyPressed = false;
-        if (activePoint && currentHandle) {
-            // Restore mirroring behavior
-            const oppositeHandle = currentHandle === 'handleOut' ? 'handleIn' : 'handleOut';
-            if (activePoint[currentHandle]) {
-                activePoint[oppositeHandle] = {
-                    x: activePoint.x - (activePoint[currentHandle].x - activePoint.x),
-                    y: activePoint.y - (activePoint[currentHandle].y - activePoint.y)
-                };
-            }
-        }
-    }
-}
-
-        function draw(e) {
-            if (!isDrawing || !activePoint) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+function drawPath() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGoalShape();
+    
+    if (path.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        
+        for (let i = 1; i < path.length; i++) {
+            const prev = path[i-1];
+            const curr = path[i];
             
-            if (currentHandle) {
-                activePoint[currentHandle] = {x, y};
-                if (currentHandle === 'handleOut' && !isAltKeyPressed) {
-                    activePoint.handleIn = {
-                        x: activePoint.x - (activePoint.handleOut.x - activePoint.x),
-                        y: activePoint.y - (activePoint.handleOut.y - activePoint.y)
-                    };
-                }
-            }
-            drawPath();
-        }
-
-        function stopDrawing() {
-            isDrawing = false;
-            currentHandle = null;
-            activePoint = null;
-        }
-
-        function drawPath() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawGoalShape();
+            // Always draw curves, even if handles aren't set
+            const prevOut = prev.handleOut || {x: prev.x, y: prev.y};
+            const currIn = curr.handleIn || {x: curr.x, y: curr.y};
             
-            if (path.length > 0) {
+            ctx.bezierCurveTo(
+                prevOut.x, prevOut.y,
+                currIn.x, currIn.y,
+                curr.x, curr.y
+            );
+        }
+        
+        // Close the path if the last point is marked as closed
+        if (path[path.length - 1].isClosed) {
+            ctx.closePath();
+        }
+        
+        ctx.stroke();
+
+        // Draw handles and points
+        ctx.fillStyle = 'red';
+        path.forEach((point, index) => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (point.handleOut || index === 0) {
+                const handleOut = point.handleOut || {x: point.x, y: point.y};
                 ctx.beginPath();
-                ctx.moveTo(path[0].x, path[0].y);
-                for (let i = 1; i < path.length; i++) {
-                    const prev = path[i-1];
-                    const curr = path[i];
-                    if (prev.handleOut && curr.handleIn) {
-                        ctx.bezierCurveTo(
-                            prev.handleOut.x, prev.handleOut.y,
-                            curr.handleIn.x, curr.handleIn.y,
-                            curr.x, curr.y
-                        );
-                    } else {
-                        ctx.lineTo(curr.x, curr.y);
-                    }
-                }
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(handleOut.x, handleOut.y);
                 ctx.stroke();
-
-                // Draw handles
-                ctx.fillStyle = 'red';
-                path.forEach(point => {
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    if (point.handleOut) {
-                        ctx.beginPath();
-                        ctx.moveTo(point.x, point.y);
-                        ctx.lineTo(point.handleOut.x, point.handleOut.y);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.arc(point.handleOut.x, point.handleOut.y, 3, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    if (point.handleIn) {
-                        ctx.beginPath();
-                        ctx.moveTo(point.x, point.y);
-                        ctx.lineTo(point.handleIn.x, point.handleIn.y);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.arc(point.handleIn.x, point.handleIn.y, 3, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
+                ctx.beginPath();
+                ctx.arc(handleOut.x, handleOut.y, 3, 0, Math.PI * 2);
+                ctx.fill();
             }
-        }
+            
+            if (point.handleIn || index === path.length - 1) {
+                const handleIn = point.handleIn || {x: point.x, y: point.y};
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(handleIn.x, handleIn.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(handleIn.x, handleIn.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+}
 
         function undoLastPoint() {
             path.pop();
